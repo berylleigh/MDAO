@@ -17,7 +17,7 @@ use frame_support::{
 pub use pallet::*;
 use sp_runtime::{
 	traits::{AccountIdConversion, Saturating, Zero},
-	ArithmeticError, DispatchError,
+	ArithmeticError, // DispatchError, only used to check calls
 };
 use sp_std::prelude::*;
 pub use weights::WeightInfo;
@@ -112,7 +112,7 @@ pub mod pallet {
 		/// Be conscious of the implementation used here. We assume at worst that
 		/// a vector of `MaxCalls` indices are queried for any call validation.
 		/// You may need to provide a custom benchmark if this assumption is broken.
-		/// 
+		
 		// type ValidateCall: ValidateCall<Self>;
 
 		/// Number of time we should try to generate a random number that has no modulo bias.
@@ -285,23 +285,23 @@ pub mod pallet {
 		/// provided by this pallet, which uses storage to determine the valid calls.
 		///
 		/// This extrinsic must be called by the Manager origin.
-		#[pallet::call_index(1)]
-		#[pallet::weight(T::WeightInfo::set_calls(calls.len() as u32))]
-		pub fn set_calls(
-			origin: OriginFor<T>,
-			calls: Vec<<T as Config>::RuntimeCall>,
-		) -> DispatchResult {
-			T::ManagerOrigin::ensure_origin(origin)?;
-			ensure!(calls.len() <= T::MaxCalls::get() as usize, Error::<T>::TooManyCalls);
-			if calls.is_empty() {
-				CallIndices::<T>::kill();
-			} else {
-				let indices = Self::calls_to_indices(&calls)?;
-				CallIndices::<T>::put(indices);
-			}
-			Self::deposit_event(Event::<T>::CallsUpdated);
-			Ok(())
-		}
+		// #[pallet::call_index(1)]
+		// #[pallet::weight(T::WeightInfo::set_calls(calls.len() as u32))]
+		// pub fn set_calls(
+		// 	origin: OriginFor<T>,
+		// 	calls: Vec<<T as Config>::RuntimeCall>,
+		// ) -> DispatchResult {
+		// 	T::ManagerOrigin::ensure_origin(origin)?;
+		// 	ensure!(calls.len() <= T::MaxCalls::get() as usize, Error::<T>::TooManyCalls);
+		// 	if calls.is_empty() {
+		// 		CallIndices::<T>::kill();
+		// 	} else {
+		// 		let indices = Self::calls_to_indices(&calls)?;
+		// 		CallIndices::<T>::put(indices);
+		// 	}
+		// 	Self::deposit_event(Event::<T>::CallsUpdated);
+		// 	Ok(())
+		// }
 
 		/// Start a lottery using the provided configuration.
 		///
@@ -413,25 +413,25 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Converts a vector of calls into a vector of call indices.
-	fn calls_to_indices(
-		calls: &[<T as Config>::RuntimeCall],
-	) -> Result<BoundedVec<CallIndex, T::MaxCalls>, DispatchError> {
-		let mut indices = BoundedVec::<CallIndex, T::MaxCalls>::with_bounded_capacity(calls.len());
-		for c in calls.iter() {
-			let index = Self::call_to_index(c)?;
-			indices.try_push(index).map_err(|_| Error::<T>::TooManyCalls)?;
-		}
-		Ok(indices)
-	}
+	// fn calls_to_indices(
+	// 	calls: &[<T as Config>::RuntimeCall],
+	// ) -> Result<BoundedVec<CallIndex, T::MaxCalls>, DispatchError> {
+	// 	let mut indices = BoundedVec::<CallIndex, T::MaxCalls>::with_bounded_capacity(calls.len());
+	// 	for c in calls.iter() {
+	// 		let index = Self::call_to_index(c)?;
+	// 		indices.try_push(index).map_err(|_| Error::<T>::TooManyCalls)?;
+	// 	}
+	// 	Ok(indices)
+	// }
 
 	/// Convert a call to it's call index by encoding the call and taking the first two bytes.
-	fn call_to_index(call: &<T as Config>::RuntimeCall) -> Result<CallIndex, DispatchError> {
-		let encoded_call = call.encode();
-		if encoded_call.len() < 2 {
-			return Err(Error::<T>::EncodingFailed.into());
-		}
-		Ok((encoded_call[0], encoded_call[1]))
-	}
+	// fn call_to_index(call: &<T as Config>::RuntimeCall) -> Result<CallIndex, DispatchError> {
+	// 	let encoded_call = call.encode();
+	// 	if encoded_call.len() < 2 {
+	// 		return Err(Error::<T>::EncodingFailed.into());
+	// 	}
+	// 	Ok((encoded_call[0], encoded_call[1]))
+	// }
 
 	/// Logic for buying a ticket.
 	// fn do_buy_ticket(caller: &T::AccountId, call: &<T as Config>::RuntimeCall) -> DispatchResult {
