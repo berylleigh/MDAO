@@ -47,26 +47,26 @@ pub struct LotteryConfig<BlockNumber> {
 	repeat: bool,
 }
 
-pub trait ValidateCall<T: Config> {
-	fn validate_call(call: &<T as Config>::RuntimeCall) -> bool;
-}
+// pub trait ValidateCall<T: Config> {
+// 	fn validate_call(call: &<T as Config>::RuntimeCall) -> bool;
+// }
 
-impl<T: Config> ValidateCall<T> for () {
-	fn validate_call(_: &<T as Config>::RuntimeCall) -> bool {
-		false
-	}
-}
+// impl<T: Config> ValidateCall<T> for () {
+// 	fn validate_call(_: &<T as Config>::RuntimeCall) -> bool {
+// 		false
+// 	}
+// }
 
-impl<T: Config> ValidateCall<T> for Pallet<T> {
-	fn validate_call(call: &<T as Config>::RuntimeCall) -> bool {
-		let valid_calls = CallIndices::<T>::get();
-		let call_index = match Self::call_to_index(call) {
-			Ok(call_index) => call_index,
-			Err(_) => return false,
-		};
-		valid_calls.iter().any(|c| call_index == *c)
-	}
-}
+// impl<T: Config> ValidateCall<T> for Pallet<T> {
+// 	fn validate_call(call: &<T as Config>::RuntimeCall) -> bool {
+// 		let valid_calls = CallIndices::<T>::get();
+// 		let call_index = match Self::call_to_index(call) {
+// 			Ok(call_index) => call_index,
+// 			Err(_) => return false,
+// 		};
+// 		valid_calls.iter().any(|c| call_index == *c)
+// 	}
+// }
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -112,7 +112,8 @@ pub mod pallet {
 		/// Be conscious of the implementation used here. We assume at worst that
 		/// a vector of `MaxCalls` indices are queried for any call validation.
 		/// You may need to provide a custom benchmark if this assumption is broken.
-		type ValidateCall: ValidateCall<Self>;
+		/// 
+		// type ValidateCall: ValidateCall<Self>;
 
 		/// Number of time we should try to generate a random number that has no modulo bias.
 		/// The larger this number, the more potential computation is used for picking the winner,

@@ -295,7 +295,7 @@ impl pallet_bblott::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type ManagerOrigin = frame_system::EnsureRoot<AccountId>;
 	type MaxCalls = MaxCalls;
-	type ValidateCall = Lottery;
+	// type ValidateCall = Lottery;
 
 	type MaxGenerateRandom = MaxGenerateRandom;
 	type WeightInfo = pallet_bblott::weights::SubstrateWeight<Runtime>;
