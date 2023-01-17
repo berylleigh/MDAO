@@ -5,7 +5,6 @@
 /// <https://docs.substrate.io/reference/frame-pallets/>
 pub use pallet::*;
 
-
 #[cfg(test)]
 mod mock;
 
@@ -46,10 +45,6 @@ pub mod pallet {
 	// The pallet's runtime storage items.
 	// https://docs.substrate.io/main-docs/build/runtime-storage/
 	#[pallet::storage]
-	// #[pallet::getter(fn something)]
-	// // Learn more about declaring storage items:
-	// // https://docs.substrate.io/main-docs/build/runtime-storage/#declaring-storage-items
-	// pub type Something<T> = StorageValue<_, u32>;
 	#[pallet::getter(fn info)]
 	pub type AccountToUserInfo<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, UserInfo, OptionQuery>;
 
@@ -61,7 +56,6 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		/// Event documentation should end with an array that provides descriptive names for event
 		/// parameters. [something, who]
-		// SomethingStored { something: u32, who: T::AccountId },
 		UserCreated {user: T::AccountId},
 	}
 
