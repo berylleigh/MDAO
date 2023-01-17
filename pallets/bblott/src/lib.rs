@@ -97,7 +97,7 @@ pub mod pallet {
 		/// Something that provides randomness in the runtime.
 		type Randomness: Randomness<Self::Hash, Self::BlockNumber>;
 
-		/// The overarching event type.
+		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		/// The manager origin.
@@ -194,6 +194,17 @@ pub mod pallet {
 	#[pallet::storage]
 	pub(crate) type CallIndices<T: Config> =
 		StorageValue<_, BoundedVec<CallIndex, T::MaxCalls>, ValueQuery>;
+
+	#[pallet::storage]
+	pub(crate) type BettingFor<T: Config> = StorageDoubleMap<
+		_,
+		Twox64Concat,
+		u32,
+		Twox64Concat,
+		T::AccountId,
+		u32,
+		ValueQuery,
+	>;	
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
@@ -313,7 +324,7 @@ pub mod pallet {
 		/// * `length`: How long the lottery should run for starting at the current block.
 		/// * `delay`: How long after the lottery end we should wait before picking a winner.
 		/// * `repeat`: If the lottery should repeat when completed.
-		#[pallet::call_index(2)]
+		#[pallet::call_index(1)]
 		#[pallet::weight(T::WeightInfo::start_lottery())]
 		pub fn start_lottery(
 			origin: OriginFor<T>,
@@ -347,7 +358,7 @@ pub mod pallet {
 		/// The lottery will continue to run to completion.
 		///
 		/// This extrinsic must be called by the `ManagerOrigin`.
-		#[pallet::call_index(3)]
+		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::stop_repeat())]
 		pub fn stop_repeat(origin: OriginFor<T>) -> DispatchResult {
 			T::ManagerOrigin::ensure_origin(origin)?;
@@ -360,7 +371,7 @@ pub mod pallet {
 		}
 
 		// End lottery with an extrinsic.
-		#[pallet::call_index(4)]
+		#[pallet::call_index(3)]
 		#[pallet::weight(T::WeightInfo::stop_repeat())]
 		pub fn stop_lottery(origin: OriginFor<T>) -> DispatchResult {
 			T::ManagerOrigin::ensure_origin(origin)?;
