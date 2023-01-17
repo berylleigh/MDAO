@@ -1,8 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-/// Edit this file to define custom logic or remove it if it is not needed.
-/// Learn more about FRAME and the core library of Substrate FRAME pallets:
-/// <https://docs.substrate.io/reference/frame-pallets/>
 pub use pallet::*;
 
 #[cfg(test)]
@@ -19,7 +16,7 @@ pub mod pallet {
 	use frame_support::pallet_prelude::{*, DispatchResult};
 	use frame_system::{pallet_prelude::*, ensure_signed};
 	use frame_support::inherent::Vec;
-	// use sp_std::prelude::*;
+	
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
@@ -33,20 +30,23 @@ pub mod pallet {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 	}
 	#[derive(Encode, Decode, Clone, PartialEq, Default, TypeInfo)]
-	pub struct UserInfo {
+	pub struct ClipInfo {
 		/// Username, stored as an array of bytes.
-		pub username: Vec<u8>,
+		pub cliphash: Vec<u8>,
 		/// Numberid of the user.
 		pub id: i64,
-		/// The "About Me" section of the user
-		pub about_me: Vec<u8>,
+		// pub id: T::AccountId,
+		// The "About Me" section of the user
+		// pub about_me: Vec<u8>,
 	}
 
 	// The pallet's runtime storage items.
 	// https://docs.substrate.io/main-docs/build/runtime-storage/
 	#[pallet::storage]
 	#[pallet::getter(fn info)]
-	pub type AccountToUserInfo<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, UserInfo, OptionQuery>;
+	// pub type AccountToClipInfo<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, UserInfo, OptionQuery>;
+	pub type AccountToClipInfo<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, ClipInfo, OptionQuery>;
+
 
 
 	// Pallets use events to inform users when important changes are made.
@@ -56,7 +56,7 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		/// Event documentation should end with an array that provides descriptive names for event
 		/// parameters. [something, who]
-		UserCreated {user: T::AccountId},
+		ClipStored {user: T::AccountId},
 	}
 
 	// Errors inform users that something went wrong.
@@ -77,11 +77,15 @@ pub mod pallet {
 		/// storage and emits an event. This function must be dispatched by a signed extrinsic.
 		#[pallet::call_index(0)]
 		#[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
-		pub fn register_user(origin: OriginFor<T>, username: Vec<u8>, id: i64, about_me: Vec<u8>)-> DispatchResult {
+		// pub fn register_user(origin: OriginFor<T>, cliphash: Vec<u8>, id: i64, about_me: Vec<u8>)-> 
+		pub fn post_clip(origin: OriginFor<T>, cliphash: Vec<u8>, id: i64)-> 
+		// pub fn register_user(origin: OriginFor<T>, cliphash: Vec<u8>, id: T::AccountId)-> 
+		DispatchResult {
 			let sender = ensure_signed(origin)?;
-			let new_user = UserInfo{username, id, about_me};
-			<AccountToUserInfo<T>>::insert(&sender, new_user);
-			Self::deposit_event(Event::<T>::UserCreated{user: sender});
+			// let new_user = ClipInfo{cliphash, id, about_me};
+			let new_clip = ClipInfo{cliphash, id};
+			<AccountToClipInfo<T>>::insert(&sender, new_clip);
+			Self::deposit_event(Event::<T>::ClipStored{user: sender});
 
 			Ok(())
 		}
