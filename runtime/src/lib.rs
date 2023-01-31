@@ -51,6 +51,7 @@ pub use sp_runtime::{Perbill, Permill};
 pub use pallet_template;
 pub use pallet_clipbets;
 
+
 /// An index to a block.
 pub type BlockNumber = u32;
 
@@ -286,6 +287,10 @@ impl pallet_clipbets::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 }
 
+impl pallet_double_map::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+}
+
 // Configure the pallet-bblott in pallets/bblott.
 parameter_types! {
 	pub const LotteryPalletId: PalletId = PalletId(*b"py/lotto");
@@ -327,6 +332,7 @@ construct_runtime!(
 		TemplateModule: pallet_template,
 		Lottery: pallet_bblott,
 		Clipbets: pallet_clipbets,
+		DoubleMap: pallet_double_map,
 	}
 );
 

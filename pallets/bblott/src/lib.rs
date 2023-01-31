@@ -464,7 +464,6 @@ impl<T: Config> Pallet<T> {
 		// Try to update the participant status
 		Participants::<T>::try_mutate(
 			&caller,
-			// |(lottery_index, participating_calls)| -> DispatchResult
 			|(lottery_index, participating_calls)| -> DispatchResult {
 				let index = LotteryIndex::<T>::get();
 				// If lottery index doesn't match, then reset participating calls and index.
