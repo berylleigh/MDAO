@@ -79,10 +79,10 @@ pub mod pallet {
 	// pub type AccountToClipInfo<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, Vec<u8>, OptionQuery>;
 	pub type AccountToClipInfo<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, Vec<u8>, OptionQuery>;
 
+	#[pallet::storage]
+	#[pallet::getter(fn all_members)]
+	pub(super) type AllMembers<T: Config> = StorageValue<_, Vec<T::AccountId>, ValueQuery>;
 	
-	
-
-
 
 	// Pallets use events to inform users when important changes are made.
 	// https://docs.substrate.io/main-docs/build/events-errors/
@@ -100,6 +100,8 @@ pub mod pallet {
 
 		GotStuff (T::AccountId),
 		// GotStuff (core::option::Option<(Vec<u8>, Vec<u8>)>),
+
+		NewMember(T::AccountId),
 			
 	}
 	
@@ -111,18 +113,12 @@ pub mod pallet {
 		/// Errors should have helpful documentation associated with them.
 		StorageOverflow,
 	}
-
-
 	
 	#[pallet::call]
-
 	impl<T: Config> Pallet<T> {
-		
 		#[pallet::call_index(0)]
 		#[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
 		//  pub fn register_user(origin: OriginFor<T>, cliphash: Vec<u8>, id: i64, description: Vec<u8>)->
-		
-		
 		
 		pub fn post_clip(
 			origin: OriginFor<T>, 
@@ -170,8 +166,30 @@ pub mod pallet {
 
 		// 	Ok(().into())
 		// }
+
+		/// Join the `AllMembers` vec before joining a group
+		#[pallet::weight(10_000)]
+		pub fn join_all_members(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+			let new_member = ensure_signed(origin)?;
+			ensure!(
+				!Self::is_member(&new_member),
+				"already a member, can't join"
+			);
+			<AllMembers<T>>::append(&new_member);
+
+			Self::deposit_event(Event::NewMember(new_member));
+			Ok(().into())
+		}
 		
 
 	}
 	
 }
+
+impl<T: Config> Pallet<T> {
+	// for fast membership checks (see check-membership recipe for more details)
+	fn is_member(who: &T::AccountId) -> bool {
+		Self::all_members().contains(who)
+	}
+}
+
