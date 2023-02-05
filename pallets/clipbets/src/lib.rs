@@ -11,7 +11,7 @@ mod mock;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
-
+use frame_support::inherent::Vec;
 // use frame_support::storage::StorageAppend;
 // pub type JustWork = Vec<u8> as StorageAppend<T>;
 
@@ -20,11 +20,7 @@ pub mod pallet {
 	use frame_support::{pallet_prelude::{*, DispatchResult, DispatchResultWithPostInfo}, storage::PrefixIterator};
 	use frame_system::{pallet_prelude::*, ensure_signed};
 	use frame_support::inherent::Vec;
-	// use crate::pallet::storage::StorageAppend;
-	use codec::{Encode, Decode, EncodeLike, WrapperTypeEncode, EncodeAppend};
-
-	
-	
+	// use codec::{Encode, Decode, EncodeLike, WrapperTypeEncode, EncodeAppend};
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
@@ -81,7 +77,8 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn all_members)]
-	pub(super) type AllMembers<T: Config> = StorageValue<_, Vec<T::AccountId>, ValueQuery>;
+	// pub(super) type AllMembers<T: Config> = StorageValue<_, Vec<T::AccountId>, ValueQuery>;
+	pub(super) type AllMembers<T: Config> = StorageValue<_, Vec<Vec<u8>>, ValueQuery>;
 	
 
 	// Pallets use events to inform users when important changes are made.
@@ -94,14 +91,8 @@ pub mod pallet {
 		/// Event documentation should end with an array that provides descriptive names for event
 		/// parameters. [something, who]
 		ClipStored {user: T::AccountId},
-		
-		// ClipStored (T::AccountId, Vec<u8>, Vec<u8>),
-		// ClipStored (T::AccountId, Vec<u8>),
-
 		GotStuff (T::AccountId),
-		// GotStuff (core::option::Option<(Vec<u8>, Vec<u8>)>),
-
-		NewMember(T::AccountId),
+		NewMember(T::AccountId, Vec<u8>),
 			
 	}
 	
@@ -122,24 +113,15 @@ pub mod pallet {
 		
 		pub fn post_clip(
 			origin: OriginFor<T>, 
-				
-			// cliphash: BoundedVec<u8,u32>,
 			cliphash: Vec<u8>,
 			// )-> DispatchResultWithPostInfo {
 			)-> DispatchResult {	
 			let sender = ensure_signed(origin)?;
-
-			// let new_clip = ClipInfo{cliphash, id, description};
-			// encode_like::<(u8,i64,u8), _>(&ClipInfo{cliphash, id, description});
-					
-			// <AccountToClipInfo<T>>::insert(&sender, new_clip);
-			// Value is required to implement codec::EncodeAppend.
+			
 			<AccountToClipInfo<T>>::insert(&sender, &cliphash);
 		
 			Self::deposit_event(Event::<T>::ClipStored{user: sender});
-			// Self::deposit_event(Event::<T>::ClipStored(sender, description, cliphash));
-			// Self::deposit_event(Event::<T>::ClipStored(sender, description));
-
+			
 
 			// Ok(().into()) // used with -> DispatchResultWithPostInfo
 			Ok(()) // used with -> DispatchResult
@@ -169,15 +151,17 @@ pub mod pallet {
 
 		/// Join the `AllMembers` vec before joining a group
 		#[pallet::weight(10_000)]
-		pub fn join_all_members(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+		pub fn join_all_members(origin: OriginFor<T>, cliphash: Vec<u8>,) -> DispatchResultWithPostInfo {
 			let new_member = ensure_signed(origin)?;
 			ensure!(
-				!Self::is_member(&new_member),
+				// !Self::is_member(&new_member),
+				!Self::is_member(&cliphash),
 				"already a member, can't join"
 			);
-			<AllMembers<T>>::append(&new_member);
+			// <AllMembers<T>>::append(&new_member);
+			<AllMembers<T>>::append(&cliphash);
 
-			Self::deposit_event(Event::NewMember(new_member));
+			Self::deposit_event(Event::NewMember(new_member, cliphash));
 			Ok(().into())
 		}
 		
@@ -188,7 +172,8 @@ pub mod pallet {
 
 impl<T: Config> Pallet<T> {
 	// for fast membership checks (see check-membership recipe for more details)
-	fn is_member(who: &T::AccountId) -> bool {
+	// fn is_member(who: &T::AccountId) -> bool {
+	fn is_member(who: &Vec<u8>) -> bool {	
 		Self::all_members().contains(who)
 	}
 }
