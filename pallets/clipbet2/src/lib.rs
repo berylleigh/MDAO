@@ -14,8 +14,6 @@ mod benchmarking;
 // use frame_support::inherent::Vec;
 
 
-
-
 #[frame_support::pallet]
 pub mod pallet {
 	use frame_support::{pallet_prelude::{*, DispatchResult, DispatchResultWithPostInfo},};
@@ -196,8 +194,6 @@ pub mod pallet {
 		// }
 
 		
-		
-
 	}
 	
 }
