@@ -11,13 +11,13 @@ pub use pallet::*;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
-use frame_support::inherent::Vec;
+// use frame_support::inherent::Vec;
+
 
 
 
 #[frame_support::pallet]
 pub mod pallet {
-	// use frame_support::{pallet_prelude::{*, DispatchResult, DispatchResultWithPostInfo}, storage::PrefixIterator};
 	use frame_support::{pallet_prelude::{*, DispatchResult, DispatchResultWithPostInfo},};
 	use frame_system::{pallet_prelude::*, ensure_signed};
 	use frame_support::inherent::Vec;
@@ -202,7 +202,10 @@ pub mod pallet {
 	
 }
 
+use frame_support::inherent::Vec;
+
 impl<T: Config> Pallet<T> {
+	
 	// for fast membership checks (see check-membership recipe for more details)
 	// fn is_member(who: &T::AccountId) -> bool {
 	fn is_member(who: &Vec<u8>) -> bool {	

@@ -4,6 +4,7 @@ members = [
     "pallets/template",
     "pallets/double-map",
     "pallets/clipbets",
+    "pallets/clipbet2",
     "pallets/bblott",
     "runtime",
 ]

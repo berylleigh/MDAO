@@ -136,7 +136,7 @@ pub mod pallet {
 
 			// remove all group members from MemberScore at once
 			// <MemberScore<T>>::remove_prefix(&group_id);
-			<MemberScore<T>>::clear_prefix(&group_id, 100, None);
+			// <MemberScore<T>>::clear_prefix(&group_id, 100, None);
 
 			Self::deposit_event(Event::RemoveGroup(group_id));
 			Ok(().into())

@@ -287,6 +287,11 @@ impl pallet_clipbets::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 }
 
+/// Configure the pallet-clipbet2 in pallets/clipbet2.
+impl pallet_clipbet2::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+}
+
 impl pallet_double_map::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 }
@@ -332,6 +337,7 @@ construct_runtime!(
 		TemplateModule: pallet_template,
 		Lottery: pallet_bblott,
 		Clipbets: pallet_clipbets,
+		Clipbet2: pallet_clipbet2,
 		DoubleMap: pallet_double_map,
 	}
 );
