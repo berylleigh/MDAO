@@ -47,9 +47,9 @@ pub mod pallet {
 	// https://docs.substrate.io/main-docs/build/runtime-storage/
 	
 	#[pallet::storage]
-	#[pallet::getter(fn info)]
-	// pub type AccountToClipInfo<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, Vec<u8>, OptionQuery>;
-	pub type AccountToClipInfo<T: Config> = StorageMap<_, Blake2_128Concat, Vec<u8>, Vec<T::AccountId>,  OptionQuery>;
+	#[pallet::getter(fn clips)]
+	// pub type HashToAccountID<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, Vec<u8>, OptionQuery>;
+	pub type HashToAccountID<T: Config> = StorageMap<_, Blake2_128Concat, Vec<u8>, Vec<T::AccountId>,  OptionQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn member_score)]
@@ -74,6 +74,7 @@ pub mod pallet {
 		/// Event documentation should end with an array that provides descriptive names for event
 		/// parameters. [something, who]
 		ClipStored (T::AccountId, Vec<u8>),
+		ClipRemoved(Vec<u8>),
 		/// Put member score (id, index, score)
 		MemberJoinsGroup(T::AccountId, GroupIndex, u32),
 			
@@ -82,8 +83,12 @@ pub mod pallet {
 	// Errors inform users that something went wrong.
 	#[pallet::error]
 	pub enum Error<T> {
-		/// Error names should be descriptive.
-		NoneValue,
+		/// Someone has already entered this clip.
+		DuplicateClip,
+		/// There is no clip with this hash ID
+		NoClip,
+		/// You didn't post this clip
+		NotYours,
 		/// Errors should have helpful documentation associated with them.
 		StorageOverflow,
 	}
@@ -99,12 +104,50 @@ pub mod pallet {
 			cliphash: Vec<u8>,
 			)-> DispatchResult {	
 			let sender = ensure_signed(origin)?;
-			<AccountToClipInfo<T>>::append(&cliphash, &sender,);
+			//check to see if this cliphash key has been added already
+			ensure!(!<HashToAccountID<T>>::contains_key(&cliphash), Error::<T>::DuplicateClip);
+			<HashToAccountID<T>>::append(&cliphash, &sender,);
 			Self::deposit_event(Event::<T>::ClipStored(sender, cliphash));
 			Ok(()) // used with -> DispatchResult
+						
+		}
+		#[pallet::call_index(1)]
+		#[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+
+		pub fn rm_clip(
+			origin: OriginFor<T>, 
+			cliphash: Vec<u8>,
+			)-> DispatchResult {	
+			let sender = ensure_signed(origin)?;
+			
+			match Self::clips(&cliphash) {
+				// If the getter function returns None - there is no clip with this hash
+				None => return Err(Error::<T>::NoClip.into()),
+				// If the getter function option returns some, 
+				Some(vecacid) => {
+					// ensure the accountID of sendermatches the owner
+					ensure!(vecacid.contains(&sender), Error::<T>::NotYours);
+					// If all ok - remove the value from the storageMap
+					<HashToAccountID<T>>::remove(&cliphash);
+					Self::deposit_event(Event::<T>::ClipRemoved(cliphash));
+					Ok(())
+							
+				},
+			}
+
+			
+
+
+			 
+						
 		}
 
-		#[pallet::call_index(1)]
+// 		pub fn clips<KArg>(k: KArg) -> Option<Vec<T::AccountId>>
+// where
+//     KArg: frame_support::codec::EncodeLike<Vec<u8>>,
+
+
+		#[pallet::call_index(2)]
 		#[pallet::weight(10_000)]
 		pub fn join_a_doublemap(
 			origin: OriginFor<T>,
