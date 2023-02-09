@@ -10,7 +10,7 @@ pub use pallet::*;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
-#[frame_support::pallet]
+#[frame_support::pallet] 
 pub mod pallet {
 	use frame_support::{pallet_prelude::{*, DispatchResult, DispatchResultWithPostInfo},};
 	use frame_system::{pallet_prelude::*, ensure_signed};
@@ -31,14 +31,13 @@ pub mod pallet {
 
 	
 	#[derive( Encode, Decode, Clone, PartialEq, Default, TypeInfo)]
-	pub struct ClipInfo {
-		/// Username, stored as an array of bytes.
-		pub cliphash: Vec<u8>,
-		/// Numberid of the user.
-		pub id: i64,
+	#[scale_info(skip_type_params(T))]
+	pub struct BetInfo<T: Config> {
+		pub owner: T::AccountId,
+		pub better: T::AccountId,
+		pub roundid: u64,
 		pub description: Vec<u8>, 
-		// The "About Me" section of the user
-		// pub about_me: Vec<u8>,
+		pub betterval: u64,
 	}
 
 	pub type GroupIndex = u32;	
@@ -48,8 +47,13 @@ pub mod pallet {
 	
 	#[pallet::storage]
 	#[pallet::getter(fn clips)]
-	// pub type HashToAccountID<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, Vec<u8>, OptionQuery>;
-	pub type HashToAccountID<T: Config> = StorageMap<_, Blake2_128Concat, Vec<u8>, Vec<T::AccountId>,  OptionQuery>;
+	pub type AllClips<T: Config> = StorageMap<_, Blake2_128Concat, Vec<u8>, T::AccountId, OptionQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn bets)]
+	pub type BetRound<T: Config> = StorageMap<_, Blake2_128Concat, Vec<u8>, Vec<BetInfo<T>>, OptionQuery>;
+	// pub type BetRound<T: Config> = StorageMap<_, Blake2_128Concat, Vec<u8>, Vec<T::AccountId>,  OptionQuery>;
+
 
 	#[pallet::storage]
 	#[pallet::getter(fn member_score)]
@@ -73,8 +77,10 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		/// Event documentation should end with an array that provides descriptive names for event
 		/// parameters. [something, who]
+		// ClipStored (T::AccountId, Vec<u8>),
 		ClipStored (T::AccountId, Vec<u8>),
 		ClipRemoved(Vec<u8>),
+		BetPlaced(Vec<u8>),
 		/// Put member score (id, index, score)
 		MemberJoinsGroup(T::AccountId, GroupIndex, u32),
 			
@@ -98,22 +104,22 @@ pub mod pallet {
 
 		#[pallet::call_index(0)]
 		#[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
-		
 		pub fn post_clip(
 			origin: OriginFor<T>, 
 			cliphash: Vec<u8>,
 			)-> DispatchResult {	
 			let sender = ensure_signed(origin)?;
 			//check to see if this cliphash key has been added already
-			ensure!(!<HashToAccountID<T>>::contains_key(&cliphash), Error::<T>::DuplicateClip);
-			<HashToAccountID<T>>::append(&cliphash, &sender,);
+			ensure!(!<AllClips<T>>::contains_key(&cliphash), Error::<T>::DuplicateClip);
+			<AllClips<T>>::insert(&cliphash, &sender,);
+
 			Self::deposit_event(Event::<T>::ClipStored(sender, cliphash));
 			Ok(()) // used with -> DispatchResult
 						
 		}
+
 		#[pallet::call_index(1)]
 		#[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
-
 		pub fn rm_clip(
 			origin: OriginFor<T>, 
 			cliphash: Vec<u8>,
@@ -124,30 +130,58 @@ pub mod pallet {
 				// If the getter function returns None - there is no clip with this hash
 				None => return Err(Error::<T>::NoClip.into()),
 				// If the getter function option returns some, 
-				Some(vecacid) => {
-					// ensure the accountID of sendermatches the owner
-					ensure!(vecacid.contains(&sender), Error::<T>::NotYours);
+				Some(acid) => {
+					// ensure the accountID of sender matches the owner
+					ensure!(acid == sender, Error::<T>::NotYours);
 					// If all ok - remove the value from the storageMap
-					<HashToAccountID<T>>::remove(&cliphash);
+					<AllClips<T>>::remove(&cliphash);
 					Self::deposit_event(Event::<T>::ClipRemoved(cliphash));
 					Ok(())
 							
-				},
+				}
+			}
+		}
+		// BetRound
+
+		#[pallet::call_index(2)]
+		#[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+		pub fn place_bet(
+			origin: OriginFor<T>, 
+			cliphash: Vec<u8>,
+			roundid: u64,
+			description: Vec<u8>,
+			value: u64,
+			)-> DispatchResult {	
+			let better = ensure_signed(origin)?;
+			// import the clip owner from the allClips map then add all details to BetRound map 
+			// let owner = <AllClips<T>>::get(&cliphash).unwrap();
+			match Self::clips(&cliphash) {
+				// If the getter function returns None - there is no clip with this hash
+				None => return Err(Error::<T>::NoClip.into()),
+				// If the getter function option returns some, 
+				Some(acid) => {
+					let new_bet = BetInfo {owner :acid, better , roundid, description, betterval: value, };
+					//check to see if this cliphash key has been bet on by the better already if so - just add the value to betterval.
+					<BetRound<T>>::append(&cliphash, new_bet,);
+					Self::deposit_event(Event::<T>::BetPlaced(cliphash));
+					Ok(()) // used with -> DispatchResult
+							
+				}
 			}
 
 			
-
-
-			 
 						
 		}
 
-// 		pub fn clips<KArg>(k: KArg) -> Option<Vec<T::AccountId>>
-// where
-//     KArg: frame_support::codec::EncodeLike<Vec<u8>>,
+		// pub owner: Vec<u8>,
+		// // pub better: T::AccountId,
+		// pub better: Vec<u8>,
+		// pub roundid: u64,
+		// pub description: Vec<u8>, 
+		// pub betterval: u64,
 
 
-		#[pallet::call_index(2)]
+		#[pallet::call_index(4)]
 		#[pallet::weight(10_000)]
 		pub fn join_a_doublemap(
 			origin: OriginFor<T>,
