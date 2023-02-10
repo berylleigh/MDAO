@@ -52,7 +52,7 @@ pub mod pallet {
 		Key = (NMapKey<Blake2_128Concat, u64>, 
 				NMapKey<Blake2_128Concat, Vec<u8>>,
 				NMapKey<Blake2_128Concat, T::AccountId>,),
-		Value = Vec<BetInfo<T>>,
+		Value = BetInfo<T>,
 		QueryKind = OptionQuery,
 		// MaxValues = ConstU32<11>,
 	// _,
@@ -75,7 +75,6 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		/// Event documentation should end with an array that provides descriptive names for event
 		/// parameters. [something, who]
-		// ClipStored (T::AccountId, Vec<u8>),
 		ClipStored (T::AccountId, Vec<u8>),
 		ClipRemoved(Vec<u8>),
 		BetPlaced(Vec<u8>),
@@ -150,7 +149,6 @@ pub mod pallet {
 			value: u64,
 			)-> DispatchResult {	
 			let bettr = ensure_signed(origin)?;
-			// let add_bet_val: u64 = 0;
 			// import the clip owner from the allClips map then add all details to BetRound map 
 			// let owner = <AllClips<T>>::get(&cliphash).unwrap(); -cheats by unwraping the option.  Use match
 			match Self::clips(&cliphash) {
@@ -158,28 +156,23 @@ pub mod pallet {
 				None => return Err(Error::<T>::NoClip.into()),
 				// If the getter function option returns some, 
 				Some(acid) => {
-					
 					//check to see if this clip has already been bet on by this better in this round. If so,add the value to the existing betterval. Self::all_members().contains(who)
+					let mut final_val:u64 = value;
 					match Self::bets ((&roundid, &cliphash, &bettr)){
-						Some(vec_clipbets) => { 
-						// let vec_betters: Vec<T::AccountId> = vec_clipbets.iter().map(|BetInfo { ref better, .. }| better).collect();	
-						// assert!( !vec_clipbets.iter().any(|BetInfo { ref better, .. }| better == &bettr),  );
-						//betround cliphash better.  map through bets, if previous bet found, add value to betterval
 						
-						// let addval = vec_clipbets.iter().map(|BetInfo { ref better, .. }| if better == &bettr {BetInfo {betterval, ..} += value } else {}).collect; 	
-						// add_bet_val = vec_clipbets
-						
-												
+						Some(mut add_bet) => { 
+							add_bet.betterval += value;
+							final_val = add_bet.betterval;
 						}
 
 						None => { 
-							// let new_bet:BetInfo<T> = BetInfo {owner: acid, better: bettr, roundid, betterval: value, };
-							// <BetRound<T>>::append((&roundid, &cliphash), new_bet,);
+							
 						}
+						
 					}
 
-					let new_bet:BetInfo<T> = BetInfo {owner: acid, betterval: value, };
-							<BetRound<T>>::append((&roundid, &cliphash, &bettr), new_bet,);
+					let new_bet:BetInfo<T> = BetInfo {owner: acid, betterval: final_val, };
+					<BetRound<T>>::insert((&roundid, &cliphash, &bettr), new_bet,);
 					
 					Self::deposit_event(Event::<T>::BetPlaced(cliphash));
 					Ok(()) // used with -> DispatchResult
