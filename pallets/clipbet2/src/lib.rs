@@ -36,7 +36,6 @@ pub mod pallet {
 		pub owner: T::AccountId,
 		pub better: T::AccountId,
 		pub roundid: u64,
-		pub description: Vec<u8>, 
 		pub betterval: u64,
 	}
 
@@ -51,8 +50,16 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn bets)]
-	pub type BetRound<T: Config> = StorageMap<_, Blake2_128Concat, Vec<u8>, Vec<BetInfo<T>>, OptionQuery>;
-	// pub type BetRound<T: Config> = StorageMap<_, Blake2_128Concat, Vec<u8>, Vec<T::AccountId>,  OptionQuery>;
+	pub type BetRound<T: Config> = StorageDoubleMap<
+	_,
+	Blake2_128Concat, 
+	u64,  
+	Blake2_128Concat, 
+	Vec<u8>, 
+	Vec<BetInfo<T>>, 
+	OptionQuery,
+	>;
+	
 
 
 	#[pallet::storage]
@@ -149,38 +156,47 @@ pub mod pallet {
 			origin: OriginFor<T>, 
 			cliphash: Vec<u8>,
 			roundid: u64,
-			description: Vec<u8>,
 			value: u64,
 			)-> DispatchResult {	
-			let better = ensure_signed(origin)?;
+			let bettr = ensure_signed(origin)?;
+			let add_bet_val: u64 = 0;
 			// import the clip owner from the allClips map then add all details to BetRound map 
-			// let owner = <AllClips<T>>::get(&cliphash).unwrap();
+			// let owner = <AllClips<T>>::get(&cliphash).unwrap(); -cheats by unwraping the option.  Use match
 			match Self::clips(&cliphash) {
 				// If the getter function returns None - there is no clip with this hash
 				None => return Err(Error::<T>::NoClip.into()),
 				// If the getter function option returns some, 
 				Some(acid) => {
-					let new_bet = BetInfo {owner :acid, better , roundid, description, betterval: value, };
-					//check to see if this cliphash key has been bet on by the better already if so - just add the value to betterval.
-					<BetRound<T>>::append(&cliphash, new_bet,);
+					
+					//check to see if this clip has already been bet on by this better in this round (ignore rounds for now - do later  Maybe we use a DoubleMap for rounds - 1st key being each round, Key2 is cliphash??). if so,add the value to the existing betterval. Self::all_members().contains(who)
+					match Self::bets(&roundid, &cliphash) {
+						Some(vec_clipbets) => { 
+						// assert!(!vec_betters.contains(better))	
+						// let vec_betters: Vec<T::AccountId> = vec_clipbets.iter().map(|BetInfo { ref better, .. }| better).collect();	
+						// assert!( !vec_clipbets.iter().any(|BetInfo { ref better, .. }| better == &bettr),  );
+						
+						
+						// let appendbet = vec_clipbets.iter().map(|BetInfo { ref better, .. }| if better == &bettr {BetInfo {betterval, ..} += add_bet_val } else {}).collect; 	
+						// add_bet_val = vec_clipbets
+						
+												
+						}
+
+						None => { 
+																		
+						}
+					}
+					let new_bet = BetInfo {owner: acid, better: bettr, roundid, betterval: value, };
+					<BetRound<T>>::append(&roundid, &cliphash, new_bet,);
 					Self::deposit_event(Event::<T>::BetPlaced(cliphash));
 					Ok(()) // used with -> DispatchResult
 							
 				}
 			}
-
-			
 						
 		}
 
-		// pub owner: Vec<u8>,
-		// // pub better: T::AccountId,
-		// pub better: Vec<u8>,
-		// pub roundid: u64,
-		// pub description: Vec<u8>, 
-		// pub betterval: u64,
-
-
+		
 		#[pallet::call_index(4)]
 		#[pallet::weight(10_000)]
 		pub fn join_a_doublemap(
