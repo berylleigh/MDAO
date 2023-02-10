@@ -34,8 +34,6 @@ pub mod pallet {
 	#[scale_info(skip_type_params(T))]
 	pub struct BetInfo<T: Config> {
 		pub owner: T::AccountId,
-		pub better: T::AccountId,
-		pub roundid: u64,
 		pub betterval: u64,
 	}
 
@@ -51,7 +49,9 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn bets)]
 	pub type BetRound<T: Config> = StorageNMap<
-		Key = (NMapKey<Blake2_128Concat, u64>, NMapKey<Blake2_128Concat, Vec<u8>>),
+		Key = (NMapKey<Blake2_128Concat, u64>, 
+				NMapKey<Blake2_128Concat, Vec<u8>>,
+				NMapKey<Blake2_128Concat, T::AccountId>,),
 		Value = Vec<BetInfo<T>>,
 		QueryKind = OptionQuery,
 		// MaxValues = ConstU32<11>,
@@ -160,7 +160,7 @@ pub mod pallet {
 				Some(acid) => {
 					
 					//check to see if this clip has already been bet on by this better in this round. If so,add the value to the existing betterval. Self::all_members().contains(who)
-					match Self::bets ((&roundid, &cliphash)){
+					match Self::bets ((&roundid, &cliphash, &bettr)){
 						Some(vec_clipbets) => { 
 						// let vec_betters: Vec<T::AccountId> = vec_clipbets.iter().map(|BetInfo { ref better, .. }| better).collect();	
 						// assert!( !vec_clipbets.iter().any(|BetInfo { ref better, .. }| better == &bettr),  );
@@ -178,8 +178,8 @@ pub mod pallet {
 						}
 					}
 
-					let new_bet:BetInfo<T> = BetInfo {owner: acid, better: bettr, roundid, betterval: value, };
-							<BetRound<T>>::append((&roundid, &cliphash), new_bet,);
+					let new_bet:BetInfo<T> = BetInfo {owner: acid, betterval: value, };
+							<BetRound<T>>::append((&roundid, &cliphash, &bettr), new_bet,);
 					
 					Self::deposit_event(Event::<T>::BetPlaced(cliphash));
 					Ok(()) // used with -> DispatchResult
