@@ -12,7 +12,7 @@ mod benchmarking;
 
 #[frame_support::pallet] 
 pub mod pallet {
-	use frame_support::{pallet_prelude::{*, DispatchResult, DispatchResultWithPostInfo},};
+	use frame_support::{pallet_prelude::{*, DispatchResult, DispatchResultWithPostInfo, OptionQuery},};
 	use frame_system::{pallet_prelude::*, ensure_signed};
 	use frame_support::inherent::Vec;
 	// use codec::{Encode, Decode, EncodeLike, WrapperTypeEncode, EncodeAppend};
@@ -39,7 +39,7 @@ pub mod pallet {
 		pub betterval: u64,
 	}
 
-	pub type GroupIndex = u32;	
+	
 
 	// The pallet's runtime storage items.
 	// https://docs.substrate.io/main-docs/build/runtime-storage/
@@ -50,29 +50,20 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn bets)]
-	pub type BetRound<T: Config> = StorageDoubleMap<
-	_,
-	Blake2_128Concat, 
-	u64,  
-	Blake2_128Concat, 
-	Vec<u8>, 
-	Vec<BetInfo<T>>, 
-	OptionQuery,
+	pub type BetRound<T: Config> = StorageNMap<
+		Key = (NMapKey<Blake2_128Concat, u64>, NMapKey<Blake2_128Concat, Vec<u8>>),
+		Value = Vec<BetInfo<T>>,
+		QueryKind = OptionQuery,
+		// MaxValues = ConstU32<11>,
+	// _,
+	// Blake2_128Concat, 
+	// u64,  
+	// Blake2_128Concat, 
+	// Vec<u8>, 
+	// Vec<BetInfo<T>>, 
+	// OptionQuery,
 	>;
 	
-
-
-	#[pallet::storage]
-	#[pallet::getter(fn member_score)]
-	pub(super) type MemberScoreDmap<T: Config> = StorageDoubleMap<
-		_,
-		Blake2_128Concat,
-		T::AccountId,
-		Blake2_128Concat,
-		GroupIndex,
-		Vec<u32>,
-		ValueQuery,
-	>;
 	
 
 	// Pallets use events to inform users when important changes are made.
@@ -88,8 +79,8 @@ pub mod pallet {
 		ClipStored (T::AccountId, Vec<u8>),
 		ClipRemoved(Vec<u8>),
 		BetPlaced(Vec<u8>),
-		/// Put member score (id, index, score)
-		MemberJoinsGroup(T::AccountId, GroupIndex, u32),
+		
+		
 			
 	}
 	
@@ -159,7 +150,7 @@ pub mod pallet {
 			value: u64,
 			)-> DispatchResult {	
 			let bettr = ensure_signed(origin)?;
-			let add_bet_val: u64 = 0;
+			// let add_bet_val: u64 = 0;
 			// import the clip owner from the allClips map then add all details to BetRound map 
 			// let owner = <AllClips<T>>::get(&cliphash).unwrap(); -cheats by unwraping the option.  Use match
 			match Self::clips(&cliphash) {
@@ -168,26 +159,28 @@ pub mod pallet {
 				// If the getter function option returns some, 
 				Some(acid) => {
 					
-					//check to see if this clip has already been bet on by this better in this round (ignore rounds for now - do later  Maybe we use a DoubleMap for rounds - 1st key being each round, Key2 is cliphash??). if so,add the value to the existing betterval. Self::all_members().contains(who)
-					match Self::bets(&roundid, &cliphash) {
+					//check to see if this clip has already been bet on by this better in this round. If so,add the value to the existing betterval. Self::all_members().contains(who)
+					match Self::bets ((&roundid, &cliphash)){
 						Some(vec_clipbets) => { 
-						// assert!(!vec_betters.contains(better))	
 						// let vec_betters: Vec<T::AccountId> = vec_clipbets.iter().map(|BetInfo { ref better, .. }| better).collect();	
 						// assert!( !vec_clipbets.iter().any(|BetInfo { ref better, .. }| better == &bettr),  );
+						//betround cliphash better.  map through bets, if previous bet found, add value to betterval
 						
-						
-						// let appendbet = vec_clipbets.iter().map(|BetInfo { ref better, .. }| if better == &bettr {BetInfo {betterval, ..} += add_bet_val } else {}).collect; 	
+						// let addval = vec_clipbets.iter().map(|BetInfo { ref better, .. }| if better == &bettr {BetInfo {betterval, ..} += value } else {}).collect; 	
 						// add_bet_val = vec_clipbets
 						
 												
 						}
 
 						None => { 
-																		
+							// let new_bet:BetInfo<T> = BetInfo {owner: acid, better: bettr, roundid, betterval: value, };
+							// <BetRound<T>>::append((&roundid, &cliphash), new_bet,);
 						}
 					}
-					let new_bet = BetInfo {owner: acid, better: bettr, roundid, betterval: value, };
-					<BetRound<T>>::append(&roundid, &cliphash, new_bet,);
+
+					let new_bet:BetInfo<T> = BetInfo {owner: acid, better: bettr, roundid, betterval: value, };
+							<BetRound<T>>::append((&roundid, &cliphash), new_bet,);
+					
 					Self::deposit_event(Event::<T>::BetPlaced(cliphash));
 					Ok(()) // used with -> DispatchResult
 							
@@ -195,21 +188,6 @@ pub mod pallet {
 			}
 						
 		}
-
-		
-		#[pallet::call_index(4)]
-		#[pallet::weight(10_000)]
-		pub fn join_a_doublemap(
-			origin: OriginFor<T>,
-			index: GroupIndex,
-			score: u32,
-		) -> DispatchResultWithPostInfo {
-			let member = ensure_signed(origin)?;
-			<MemberScoreDmap<T>>::append(&member, &index, score);
-			Self::deposit_event(Event::MemberJoinsGroup(member, index, score));
-			Ok(().into())
-		}
-
 				
 	}
 	
