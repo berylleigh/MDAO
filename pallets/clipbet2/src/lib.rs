@@ -12,7 +12,8 @@ mod benchmarking;
 
 #[frame_support::pallet] 
 pub mod pallet {
-	use frame_support::{pallet_prelude::{*, DispatchResult, DispatchResultWithPostInfo, OptionQuery},};
+	// use frame_support::{pallet_prelude::{*, DispatchResult, DispatchResultWithPostInfo, OptionQuery},};
+	use frame_support::{pallet_prelude::{*, DispatchResult, OptionQuery},};
 	use frame_system::{pallet_prelude::*, ensure_signed};
 	use frame_support::inherent::Vec;
 	// use codec::{Encode, Decode, EncodeLike, WrapperTypeEncode, EncodeAppend};
@@ -36,7 +37,6 @@ pub mod pallet {
 		pub owner: T::AccountId,
 		pub betterval: u64,
 	}
-
 	
 
 	// The pallet's runtime storage items.
@@ -48,23 +48,26 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn bets)]
-	pub type BetRound<T: Config> = StorageNMap<
+	pub type BetsNMap<T: Config> = StorageNMap<
 		Key = (NMapKey<Blake2_128Concat, u64>, 
 				NMapKey<Blake2_128Concat, Vec<u8>>,
 				NMapKey<Blake2_128Concat, T::AccountId>,),
 		Value = BetInfo<T>,
 		QueryKind = OptionQuery,
+		// OnEmpty = ZeroDefault,
 		// MaxValues = ConstU32<11>,
-	// _,
-	// Blake2_128Concat, 
-	// u64,  
-	// Blake2_128Concat, 
-	// Vec<u8>, 
-	// Vec<BetInfo<T>>, 
-	// OptionQuery,
-	>;
+		>;
+
+	#[pallet::type_value]	
+	pub fn ZeroDefault() -> u64 {0}
+		
+	#[pallet::storage]
+	#[pallet::getter(fn roundtally)]
+	pub type RoundTally<T: Config> = StorageMap<_, Blake2_128Concat, u64, u64, ValueQuery, ZeroDefault>;	
 	
-	
+	#[pallet::storage]
+	#[pallet::getter(fn roundcliptally)]
+	pub type RoundClipTally<T: Config> = StorageDoubleMap<_, Blake2_128Concat, u64, Blake2_128Concat, Vec<u8>,  u64, ValueQuery, ZeroDefault>;
 
 	// Pallets use events to inform users when important changes are made.
 	// https://docs.substrate.io/main-docs/build/events-errors/
@@ -138,7 +141,7 @@ pub mod pallet {
 				}
 			}
 		}
-		// BetRound
+		
 
 		#[pallet::call_index(2)]
 		#[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
@@ -149,30 +152,33 @@ pub mod pallet {
 			value: u64,
 			)-> DispatchResult {	
 			let bettr = ensure_signed(origin)?;
-			// import the clip owner from the allClips map then add all details to BetRound map 
+			// import the clip owner from the allClips map then add all details to BetsNMap 
 			// let owner = <AllClips<T>>::get(&cliphash).unwrap(); -cheats by unwraping the option.  Use match
 			match Self::clips(&cliphash) {
 				// If the getter function returns None - there is no clip with this hash
 				None => return Err(Error::<T>::NoClip.into()),
 				// If the getter function option returns some, 
 				Some(acid) => {
-					//check to see if this clip has already been bet on by this better in this round. If so,add the value to the existing betterval. Self::all_members().contains(who)
+					// Add the bet value to roundtally StoragMap
+					let new_roundtally = Self::roundtally(&roundid) + value;
+					<RoundTally<T>>::insert(&roundid, new_roundtally);
+
+					// add the bet value to the roundclip DoubleMap
+					let new_roundcliptally = Self::roundcliptally(&roundid, &cliphash) + value;
+					<RoundClipTally<T>>::insert(&roundid, &cliphash, new_roundcliptally);
+
+					//check to see if there are already bets in this round, on this clip, by this better.   If so,add the value to the existing betterval. 
 					let mut final_val:u64 = value;
 					match Self::bets ((&roundid, &cliphash, &bettr)){
-						
-						Some(mut add_bet) => { 
-							add_bet.betterval += value;
-							final_val = add_bet.betterval;
-						}
-
-						None => { 
-							
-						}
-						
+						Some(add_bet) => { 
+							//Add the bet additional bet value to the final better value.
+							final_val += add_bet.betterval;
+							}
+						None => {}	
 					}
 
 					let new_bet:BetInfo<T> = BetInfo {owner: acid, betterval: final_val, };
-					<BetRound<T>>::insert((&roundid, &cliphash, &bettr), new_bet,);
+					<BetsNMap<T>>::insert((&roundid, &cliphash, &bettr), new_bet,);
 					
 					Self::deposit_event(Event::<T>::BetPlaced(cliphash));
 					Ok(()) // used with -> DispatchResult
