@@ -15,9 +15,8 @@ use frame_support::{pallet_prelude::{*, DispatchResult, OptionQuery}, PalletId, 
 use frame_system::{pallet_prelude::*, ensure_signed};
 use frame_support::inherent::Vec;
 use sp_runtime::{traits::Zero, Saturating};
-	// use codec::{Encode, Decode, EncodeLike, WrapperTypeEncode, EncodeAppend};
-type BalanceOf<T> =
-	<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+// use codec::{Encode, Decode, EncodeLike, WrapperTypeEncode, EncodeAppend};
+type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
 #[derive( Encode, Decode, Clone, PartialEq, Default, TypeInfo)]
 #[scale_info(skip_type_params(T))]
@@ -49,6 +48,7 @@ pub mod pallet {
 	pub trait Config: frame_system::Config {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+		/// Get the PalletId
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
 		/// The currency trait.
@@ -88,8 +88,6 @@ pub mod pallet {
 
 	#[pallet::type_value]	
 	pub fn ZeroDefault() -> u64 {0}
-
-	
 		
 	#[pallet::storage]
 	#[pallet::getter(fn roundtally)]
@@ -109,10 +107,13 @@ pub mod pallet {
 		/// Event documentation should end with an array that provides descriptive names for event
 		/// parameters. [something, who]
 		ClipStored (T::AccountId, Vec<u8>),
+
 		ClipRemoved(Vec<u8>),
+
 		BetPlaced(Vec<u8>),
-		
-			
+
+		SongStarted (T::AccountId, Vec<u8>, T::AccountId, BalanceOf<T>),
+					
 	}
 	
 	// Errors inform users that something went wrong.
@@ -170,9 +171,32 @@ pub mod pallet {
 				}
 			}
 		}
-		
 
 		#[pallet::call_index(2)]
+		#[pallet::weight(10_000)]
+		pub fn start_song (
+			origin: OriginFor<T>, 
+			cliphash: Vec<u8>,
+			)-> DispatchResult {	
+			let sender = ensure_signed(origin)?;
+			//check to see if this cliphash key has been added already to the song
+			// ensure!(!<AllClips<T>>::contains_key(&cliphash), Error::<T>::DuplicateClip);
+			// <AllClips<T>>::insert(&cliphash, &sender,);
+
+			// Make sure pot exists. assign variable to accound id
+			let clipbet_account = Self::account_id();
+			if T::Currency::total_balance(&clipbet_account).is_zero() {
+			T::Currency::deposit_creating(&clipbet_account, T::Currency::minimum_balance());
+			}	
+
+			let potshow = Self::pot();
+			Self::deposit_event(Event::<T>::SongStarted(sender, cliphash, potshow.0, potshow.1 ));
+			Ok(()) // used with -> DispatchResult
+						
+		}
+		
+
+		#[pallet::call_index(5)]
 		#[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
 		pub fn place_bet(
 			origin: OriginFor<T>, 
@@ -240,7 +264,7 @@ impl<T: Config> Pallet<T> {
 
 	// / Return the pot account and amount of money in the pot.
 	// / The existential deposit is not part of the pot so lottery account never gets deleted.
-	fn pot() -> (T::AccountId, BalanceOf<T>) {
+	pub fn pot() -> (T::AccountId, BalanceOf<T>) {
 		let account_id = Self::account_id();
 		let balance =
 			T::Currency::free_balance(&account_id).saturating_sub(T::Currency::minimum_balance());
@@ -249,9 +273,5 @@ impl<T: Config> Pallet<T> {
 	}
 
 
-	// // Make sure pot exists. assign variable to accound id
-	// let clipbet_account = Self::account_id();
-	// if T::Currency::total_balance(&clipbet_account).is_zero() {
-	// T::Currency::deposit_creating(&clipbet_account, T::Currency::minimum_balance());
-	// }	
+	
 }

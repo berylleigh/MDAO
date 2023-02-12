@@ -277,15 +277,15 @@ impl pallet_sudo::Config for Runtime {
 	type RuntimeCall = RuntimeCall;
 }
 
-/// Configure the pallet-template in pallets/template.
-impl pallet_template::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-}
+// Configure the pallet-template in pallets/template.
+// impl pallet_template::Config for Runtime {
+// 	type RuntimeEvent = RuntimeEvent;
+// }
 
-/// Configure the pallet-clipbets in pallets/clipbets.
-impl pallet_clipbets::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-}
+// Configure the pallet-clipbets in pallets/clipbets.
+// impl pallet_clipbets::Config for Runtime {
+// 	type RuntimeEvent = RuntimeEvent;
+// }
 
 
 parameter_types! {
@@ -300,9 +300,9 @@ impl pallet_clipbet2::Config for Runtime {
 	type MaxCalls = MaxCalls;
 }
 
-impl pallet_double_map::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-}
+// impl pallet_double_map::Config for Runtime {
+// 	type RuntimeEvent = RuntimeEvent;
+// }
 
 // Configure the pallet-bblott in pallets/bblott.
 parameter_types! {
@@ -342,11 +342,11 @@ construct_runtime!(
 		TransactionPayment: pallet_transaction_payment,
 		Sudo: pallet_sudo,
 		// Include the custom logic from the pallet-template in the runtime.
-		TemplateModule: pallet_template,
+		// TemplateModule: pallet_template,
 		Lottery: pallet_bblott,
-		Clipbets: pallet_clipbets,
+		// Clipbets: pallet_clipbets,
 		Clipbet2: pallet_clipbet2,
-		DoubleMap: pallet_double_map,
+		// DoubleMap: pallet_double_map,
 	}
 );
 
