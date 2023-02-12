@@ -287,9 +287,17 @@ impl pallet_clipbets::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 }
 
+
+parameter_types! {
+	pub const Clipbet2PalletId: PalletId = PalletId(*b"py/lotto");
+}
+
 /// Configure the pallet-clipbet2 in pallets/clipbet2.
 impl pallet_clipbet2::Config for Runtime {
+	type PalletId = Clipbet2PalletId;
 	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type MaxCalls = MaxCalls;
 }
 
 impl pallet_double_map::Config for Runtime {

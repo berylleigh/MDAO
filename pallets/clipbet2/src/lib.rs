@@ -1,6 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 pub use pallet::*;
 
+
 #[cfg(test)]
 // mod mock;
 
@@ -10,14 +11,34 @@ pub use pallet::*;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
+use frame_support::{pallet_prelude::{*, DispatchResult, OptionQuery}, PalletId, traits:: {Currency, ReservableCurrency}};
+use frame_system::{pallet_prelude::*, ensure_signed};
+use frame_support::inherent::Vec;
+use sp_runtime::{traits::Zero, Saturating};
+	// use codec::{Encode, Decode, EncodeLike, WrapperTypeEncode, EncodeAppend};
+type BalanceOf<T> =
+	<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+
+#[derive( Encode, Decode, Clone, PartialEq, Default, TypeInfo)]
+#[scale_info(skip_type_params(T))]
+pub struct BetInfo<T: Config> {
+	pub owner: T::AccountId,
+	pub betterval: u64,
+	}
+
+
 #[frame_support::pallet] 
 pub mod pallet {
+	use super::*;
 	// use frame_support::{pallet_prelude::{*, DispatchResult, DispatchResultWithPostInfo, OptionQuery},};
-	use frame_support::{pallet_prelude::{*, DispatchResult, OptionQuery},};
-	use frame_system::{pallet_prelude::*, ensure_signed};
-	use frame_support::inherent::Vec;
+	// use frame_support::{pallet_prelude::{*, DispatchResult, OptionQuery}, PalletId, traits:: {Currency, ReservableCurrency}};
+	// use frame_system::{pallet_prelude::*, ensure_signed};
+	// use frame_support::inherent::Vec;
+	// use sp_runtime::traits::Zero;
 	// use codec::{Encode, Decode, EncodeLike, WrapperTypeEncode, EncodeAppend};
-
+	// type BalanceOf<T> =
+	// <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+	
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
 	#[pallet::without_storage_info]
@@ -28,6 +49,13 @@ pub mod pallet {
 	pub trait Config: frame_system::Config {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+		#[pallet::constant]
+		type PalletId: Get<PalletId>;
+		/// The currency trait.
+		type Currency: ReservableCurrency<Self::AccountId>;
+		/// The max number of calls available in a single bet.
+		#[pallet::constant]
+		type MaxCalls: Get<u32>;
 	}
 
 	
@@ -60,6 +88,8 @@ pub mod pallet {
 
 	#[pallet::type_value]	
 	pub fn ZeroDefault() -> u64 {0}
+
+	
 		
 	#[pallet::storage]
 	#[pallet::getter(fn roundtally)]
@@ -81,7 +111,6 @@ pub mod pallet {
 		ClipStored (T::AccountId, Vec<u8>),
 		ClipRemoved(Vec<u8>),
 		BetPlaced(Vec<u8>),
-		
 		
 			
 	}
@@ -179,7 +208,9 @@ pub mod pallet {
 
 					let new_bet:BetInfo<T> = BetInfo {owner: acid, betterval: final_val, };
 					<BetsNMap<T>>::insert((&roundid, &cliphash, &bettr), new_bet,);
+
 					
+
 					Self::deposit_event(Event::<T>::BetPlaced(cliphash));
 					Ok(()) // used with -> DispatchResult
 							
@@ -192,4 +223,35 @@ pub mod pallet {
 	
 }
 
+use frame_support::traits::Get;
+use sp_runtime::traits::AccountIdConversion;
+// type BalanceOf<T> =
+	// <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
+impl<T: Config> Pallet<T> {
+	
+	/// The account ID of the lottery pot.
+	///
+	/// This actually does computation. If you need to keep using it, then make sure you cache the
+	/// value and only call this once.
+	pub fn account_id() -> T::AccountId {
+		T::PalletId::get().into_account_truncating()
+	}
+
+	// / Return the pot account and amount of money in the pot.
+	// / The existential deposit is not part of the pot so lottery account never gets deleted.
+	fn pot() -> (T::AccountId, BalanceOf<T>) {
+		let account_id = Self::account_id();
+		let balance =
+			T::Currency::free_balance(&account_id).saturating_sub(T::Currency::minimum_balance());
+
+		(account_id, balance)
+	}
+
+
+	// // Make sure pot exists. assign variable to accound id
+	// let clipbet_account = Self::account_id();
+	// if T::Currency::total_balance(&clipbet_account).is_zero() {
+	// T::Currency::deposit_creating(&clipbet_account, T::Currency::minimum_balance());
+	// }	
+}
