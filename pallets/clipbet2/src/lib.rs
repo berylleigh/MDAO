@@ -11,33 +11,33 @@ pub use pallet::*;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
-use frame_support::{pallet_prelude::{*, DispatchResult, OptionQuery}, PalletId, traits:: {Currency, ReservableCurrency}};
+use frame_support::{pallet_prelude::{*, DispatchResult, OptionQuery}, PalletId, traits:: {Currency, ReservableCurrency, ExistenceRequirement::KeepAlive,}};
 use frame_system::{pallet_prelude::*, ensure_signed};
 use frame_support::inherent::Vec;
-use sp_runtime::{traits::Zero, Saturating};
-// use codec::{Encode, Decode, EncodeLike, WrapperTypeEncode, EncodeAppend};
+// use frame_support::dispatch::fmt::Debug;
+use sp_runtime::{traits::{Zero, AccountIdConversion,}, Saturating, print, Perbill, };
+
+// use sp_runtime::traits::Printable;
+use log::{info, debug};
+
+
+
 type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
-#[derive( Encode, Decode, Clone, PartialEq, Default, TypeInfo)]
+// #[derive( Encode, Decode, Clone, PartialEq, Default, TypeInfo, Debug,)]
+#[derive( Encode, Decode, Clone, PartialEq, Default, TypeInfo,)]
 #[scale_info(skip_type_params(T))]
-pub struct BetInfo<T: Config> {
+pub struct BetInfo<T: Config, Balance> {
 	pub owner: T::AccountId,
-	pub betterval: u64,
+	pub better: T::AccountId,
+	pub betval: Balance,
+	
 	}
 
 
 #[frame_support::pallet] 
 pub mod pallet {
 	use super::*;
-	// use frame_support::{pallet_prelude::{*, DispatchResult, DispatchResultWithPostInfo, OptionQuery},};
-	// use frame_support::{pallet_prelude::{*, DispatchResult, OptionQuery}, PalletId, traits:: {Currency, ReservableCurrency}};
-	// use frame_system::{pallet_prelude::*, ensure_signed};
-	// use frame_support::inherent::Vec;
-	// use sp_runtime::traits::Zero;
-	// use codec::{Encode, Decode, EncodeLike, WrapperTypeEncode, EncodeAppend};
-	// type BalanceOf<T> =
-	// <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
-	
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
 	#[pallet::without_storage_info]
@@ -59,15 +59,7 @@ pub mod pallet {
 	}
 
 	
-	#[derive( Encode, Decode, Clone, PartialEq, Default, TypeInfo)]
-	#[scale_info(skip_type_params(T))]
-	pub struct BetInfo<T: Config> {
-		pub owner: T::AccountId,
-		pub betterval: u64,
-	}
-	
-
-	// The pallet's runtime storage items.
+		// The pallet's runtime storage items.
 	// https://docs.substrate.io/main-docs/build/runtime-storage/
 	
 	#[pallet::storage]
@@ -76,26 +68,25 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn bets)]
-	pub type BetsNMap<T: Config> = StorageNMap<
-		Key = (NMapKey<Blake2_128Concat, u64>, 
-				NMapKey<Blake2_128Concat, Vec<u8>>,
-				NMapKey<Blake2_128Concat, T::AccountId>,),
-		Value = BetInfo<T>,
-		QueryKind = OptionQuery,
-		// OnEmpty = ZeroDefault,
-		// MaxValues = ConstU32<11>,
-		>;
-
+	pub type BetsDoubleMap <T: Config> = StorageDoubleMap <
+	_, Blake2_128Concat, u64, Blake2_128Concat, Vec<u8>, Vec <BetInfo<T, BalanceOf<T>>>, OptionQuery,>;
+	
+	// All this adds a zero in the type BalanceOf<T https://substrate.stackexchange.com/questions/13/how-do-you-convert-between-substrate-specific-types-and-rust-primitive-types 	
 	#[pallet::type_value]	
-	pub fn ZeroDefault() -> u64 {0}
+	pub fn ZeroDefault<T: Config>() -> BalanceOf<T> { 
+		u32_to_balance::<T>(0)
+	}
+	pub fn u32_to_balance<T: Config>(input: u32) -> BalanceOf<T> {
+		input.into()
+	}
 		
 	#[pallet::storage]
 	#[pallet::getter(fn roundtally)]
-	pub type RoundTally<T: Config> = StorageMap<_, Blake2_128Concat, u64, u64, ValueQuery, ZeroDefault>;	
+	pub type RoundTally<T: Config> = StorageMap<_, Blake2_128Concat, u64, BalanceOf<T>, ValueQuery, ZeroDefault<T>>;	
 	
 	#[pallet::storage]
 	#[pallet::getter(fn roundcliptally)]
-	pub type RoundClipTally<T: Config> = StorageDoubleMap<_, Blake2_128Concat, u64, Blake2_128Concat, Vec<u8>,  u64, ValueQuery, ZeroDefault>;
+	pub type RoundClipTally<T: Config> = StorageDoubleMap<_, Blake2_128Concat, u64, Blake2_128Concat, Vec<u8>,  BalanceOf<T>, ValueQuery, ZeroDefault<T>>;
 
 	// Pallets use events to inform users when important changes are made.
 	// https://docs.substrate.io/main-docs/build/events-errors/
@@ -110,9 +101,13 @@ pub mod pallet {
 
 		ClipRemoved(Vec<u8>),
 
-		BetPlaced(Vec<u8>),
+		BetPlaced(Vec<u8>, BalanceOf<T>),
 
 		SongStarted (T::AccountId, Vec<u8>, T::AccountId, BalanceOf<T>),
+
+		RewardsSent(Vec<BalanceOf<T>>),
+
+		// Thisbetvec(Vec<BetInfo<T, <<T as pallet::Config>::Currency as frame_support::traits::Currency<<T as frame_system::Config>::AccountId>>::Balance>>)
 					
 	}
 	
@@ -125,8 +120,12 @@ pub mod pallet {
 		NoClip,
 		/// You didn't post this clip
 		NotYours,
+		/// There are no bets for this clip.
+		NoBetsOnClip,
 		/// Errors should have helpful documentation associated with them.
 		StorageOverflow,
+
+		
 	}
 	
 	#[pallet::call]
@@ -197,16 +196,16 @@ pub mod pallet {
 		
 
 		#[pallet::call_index(5)]
-		#[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+		#[pallet::weight(10_000)]
 		pub fn place_bet(
 			origin: OriginFor<T>, 
 			cliphash: Vec<u8>,
 			roundid: u64,
-			value: u64,
+			value: BalanceOf<T>,
 			)-> DispatchResult {	
 			let bettr = ensure_signed(origin)?;
-			// import the clip owner from the allClips map then add all details to BetsNMap 
-			// let owner = <AllClips<T>>::get(&cliphash).unwrap(); -cheats by unwraping the option.  Use match
+			// import the clip owner from the allClips map then add all details to BetsDoubleMap 
+			
 			match Self::clips(&cliphash) {
 				// If the getter function returns None - there is no clip with this hash
 				None => return Err(Error::<T>::NoClip.into()),
@@ -214,47 +213,120 @@ pub mod pallet {
 				Some(acid) => {
 					// Add the bet value to roundtally StoragMap
 					let new_roundtally = Self::roundtally(&roundid) + value;
-					<RoundTally<T>>::insert(&roundid, new_roundtally);
+					<RoundTally<T>>::insert(&roundid, &new_roundtally);
 
 					// add the bet value to the roundclip DoubleMap
 					let new_roundcliptally = Self::roundcliptally(&roundid, &cliphash) + value;
-					<RoundClipTally<T>>::insert(&roundid, &cliphash, new_roundcliptally);
+					<RoundClipTally<T>>::insert(&roundid, &cliphash, &new_roundcliptally);
 
-					//check to see if there are already bets in this round, on this clip, by this better.   If so,add the value to the existing betterval. 
-					let mut final_val:u64 = value;
-					match Self::bets ((&roundid, &cliphash, &bettr)){
-						Some(add_bet) => { 
-							//Add the bet additional bet value to the final better value.
-							final_val += add_bet.betterval;
-							}
-						None => {}	
-					}
+					// Check user has enough funds and send it to the Lottery account.
+					T::Currency::transfer(&bettr, &Self::account_id(), value, KeepAlive)?;
 
-					let new_bet:BetInfo<T> = BetInfo {owner: acid, betterval: final_val, };
-					<BetsNMap<T>>::insert((&roundid, &cliphash, &bettr), new_bet,);
-
+					let new_bet:BetInfo<T, BalanceOf<T>> = BetInfo {owner: acid, better: bettr, betval: value, };
 					
-
-					Self::deposit_event(Event::<T>::BetPlaced(cliphash));
+					<BetsDoubleMap<T>>::append(&roundid, &cliphash, new_bet,);
+			
+					Self::deposit_event(Event::<T>::BetPlaced(cliphash, value));
 					Ok(()) // used with -> DispatchResult
 							
 				}
 			}
 						
 		}
+
+		// calculate the proportional ratio each better contributed to roundcliptally. Going to have to itterate over all betters fot the winning cliphash to get each better and value? do calculation and transfer in one step?  An alternative would be to have users do a manual extrinsic to retrieve their winnings.
+
+			// rather than storageNMap, use a double map and append each bet in a Vec of structs containing the bet value and better under roundid k1 and cliphash k2. 
+			// I can then use get() to get the whole Vec to delegate rewards.   
+			// Then I can convert each transfer to a RuntimeCall and send a batch of transfers with the batch_all function of the Utility pallet. 
+
+			// pub struct BetInfo<T: Config, Balance> {
+			// 	pub owner: T::AccountId,
+			// 	pub better: T::AccountId,
+			// 	pub betval: Balance,}
+
+		#[pallet::call_index(6)]
+		#[pallet::weight(10_000)]
+		pub fn choose_winner_clip(
+			origin: OriginFor<T>, 
+			cliphash: Vec<u8>,
+			roundid: u64,
+			)-> DispatchResult {	
+			let picker = ensure_signed(origin)?;
+			// ensure this cliphash has bets
+			ensure!(Self::roundcliptally(&roundid, &cliphash) > u32_to_balance::<T>(0), Error::<T>::NoBetsOnClip);
+			//check to see if there are already bets in this round, on this clip, by this better.   If so, combine them. - do this after bets locked as part of the wins distribution. 
+			let mut rewardsvec:Vec<BalanceOf<T>> = Vec::new();
+			let rctally = Self::roundcliptally(&roundid, &cliphash);
+			let rtally = Self::roundtally(&roundid);
+			let onehun = u32_to_balance::<T>(100);
+			match Self::bets(&roundid, &cliphash){
+				Some(betsvec) => { 
+					// log::info!("betsvec = {:?}", betsvec);
+					// get the ratio of each bet value to the roundcliptally and then * it by the roundtally
+					// Make a Vec of tuple structs made of betters and their reward values
+										
+				// let better_exposure_part = Perbill::from_rational(x.betval, rctally);	
+				rewardsvec = betsvec.iter().map(|x| (Perbill::from_rational(x.betval, rctally))*rtally).collect();					
+					}
+				None => {}	
+			}
+			// pub struct BetInfo<T: Config, Balance> {
+			// 	pub owner: T::AccountId,
+			// 	pub better: T::AccountId,
+			// 	pub betval: Balance,}
+			log::info!("roundcliptally = {:?}", Self::roundcliptally(&roundid, &cliphash));
+			log::info!("roundtally = {:?}", Self::roundtally(&roundid));
+			log::debug!("roundtally = {:?}", Self::roundtally(&roundid));
+			log::info!("rewardsvec = {:?}", rewardsvec);
+			
+
+
+			// Check pot account has enough funds and send it to the winning addresses.
+			
+			// for (roundid, cliphash) in <BetsDoubleMap<T>>::drain_prefix(&collection) {}
+
+			// let betval = Self::bets ((&roundid, &cliphash, &bettr)).unwrap();
+			// let clipval = Self::roundcliptally(&roundid, &cliphash);
+			// T::Currency::transfer(&Self::account_id(), &bettr, betval / clipval , KeepAlive)?;
+					
+			// clear the roundtally StoragMap
+					// let new_roundtally = Self::roundtally(&roundid) ;
+					// <RoundTally<T>>::clear();
+
+					// clear the roundcliptally DoubleMap
+					// let new_roundcliptally = Self::roundcliptally(&roundid, &cliphash) ;
+					// <RoundClipTally<T>>::insert(&roundid, &cliphash, &new_roundcliptally);
+
+					//check to see if there are already bets in this round, on this clip, by this better.   If so,add the value to the existing betval. 
 				
+					// let new_bet:BetInfo<T, BalanceOf<T>> = BetInfo {owner: acid, betval: final_val, };
+					// <BetsDoubleMap<T>>::insert((&roundid, &cliphash, &picker), new_bet,);
+
+					// Print a message
+					print("Hello World");
+					
+					
+					
+					// Self::deposit_event(Event::<T>::RewardsSent(rewardsvec));
+					
+					Ok(()) // used with -> DispatchResult
+							
+			}
+					
 	}
 	
 }
 
-use frame_support::traits::Get;
-use sp_runtime::traits::AccountIdConversion;
+
+
+
 // type BalanceOf<T> =
 	// <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
 impl<T: Config> Pallet<T> {
 	
-	/// The account ID of the lottery pot.
+	/// The account ID of the clipbet pot.
 	///
 	/// This actually does computation. If you need to keep using it, then make sure you cache the
 	/// value and only call this once.
