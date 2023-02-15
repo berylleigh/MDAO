@@ -23,6 +23,11 @@ frame-system = { version = "4.0.0-dev", default-features = false, git = "https:/
 sp-runtime = { version = "7.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", "branch" = "polkadot-v0.9.35" }
 log = "0.4.17"
 
+# subxt
+# sp-keyring = { version = "7.0.0", git = "https://github.com/paritytech/substrate.git", "branch" = "polkadot-v0.9.35" }
+# subxt = "0.27.0"
+# tracing-subscriber = "0.3.11"
+
 [dev-dependencies]
 sp-core = { version = "7.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", "branch" = "polkadot-v0.9.35" }
 sp-io = { version = "7.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", "branch" = "polkadot-v0.9.35" }

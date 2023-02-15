@@ -20,6 +20,13 @@ use sp_runtime::{traits::{Zero, AccountIdConversion,}, Saturating, print, Perbil
 // use sp_runtime::traits::Printable;
 use log::{info, debug};
 
+// use sp_keyring::AccountKeyring;
+// use subxt::{
+//     tx::PairSigner,
+//     OnlineClient,
+//     PolkadotConfig,
+// };
+
 
 
 type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -225,7 +232,7 @@ pub mod pallet {
 					let new_bet:BetInfo<T, BalanceOf<T>> = BetInfo {owner: acid, better: bettr, betval: value, };
 					
 					<BetsDoubleMap<T>>::append(&roundid, &cliphash, new_bet,);
-			
+
 					Self::deposit_event(Event::<T>::BetPlaced(cliphash, value));
 					Ok(()) // used with -> DispatchResult
 							
@@ -238,7 +245,7 @@ pub mod pallet {
 
 			// rather than storageNMap, use a double map and append each bet in a Vec of structs containing the bet value and better under roundid k1 and cliphash k2. 
 			// I can then use get() to get the whole Vec to delegate rewards.   
-			// Then I can convert each transfer to a RuntimeCall and send a batch of transfers with the batch_all function of the Utility pallet. 
+			// Then I can convert each transfer to a RuntimeCall and send a batch of transfers with the batch_all function of the Utility pallet formatted:  Vec<<T as Config>::RuntimeCall>
 
 			// pub struct BetInfo<T: Config, Balance> {
 			// 	pub owner: T::AccountId,
@@ -253,20 +260,21 @@ pub mod pallet {
 			roundid: u64,
 			)-> DispatchResult {	
 			let picker = ensure_signed(origin)?;
-			// ensure this cliphash has bets
-			ensure!(Self::roundcliptally(&roundid, &cliphash) > u32_to_balance::<T>(0), Error::<T>::NoBetsOnClip);
+			// ensure this cliphash has bets-this works as the default value of the doublemap is zero.
+			ensure!(!Self::roundcliptally(&roundid, &cliphash).is_zero(), Error::<T>::NoBetsOnClip);
 			//check to see if there are already bets in this round, on this clip, by this better.   If so, combine them. - do this after bets locked as part of the wins distribution. 
-			let mut rewardsvec:Vec<BalanceOf<T>> = Vec::new();
-			let rctally = Self::roundcliptally(&roundid, &cliphash);
-			let rtally = Self::roundtally(&roundid);
-			let onehun = u32_to_balance::<T>(100);
+		let mut rewardsvec:Vec<BalanceOf<T>> = Vec::new();
+		let rctally = Self::roundcliptally(&roundid, &cliphash);
+		let rtally = Self::roundtally(&roundid);
+		
 			match Self::bets(&roundid, &cliphash){
 				Some(betsvec) => { 
 					// log::info!("betsvec = {:?}", betsvec);
 					// get the ratio of each bet value to the roundcliptally and then * it by the roundtally
 					// Make a Vec of tuple structs made of betters and their reward values
 										
-				// let better_exposure_part = Perbill::from_rational(x.betval, rctally);	
+				// let better_exposure_part = Perbill::from_rational(x.betval, rctally);
+				// https://substrate.stackexchange.com/questions/6147/balance-division-in-substrate-runtime	
 				rewardsvec = betsvec.iter().map(|x| (Perbill::from_rational(x.betval, rctally))*rtally).collect();					
 					}
 				None => {}	
@@ -313,6 +321,8 @@ pub mod pallet {
 					Ok(()) // used with -> DispatchResult
 							
 			}
+
+		
 					
 	}
 	
