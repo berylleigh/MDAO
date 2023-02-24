@@ -13,6 +13,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "LooseInterface"
+version = "3.0.0"
+dependencies = [
+ "frame-support",
+ "sp-std",
+]
+
+[[package]]
 name = "addr2line"
 version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3868,6 +3876,7 @@ dependencies = [
 name = "pallet-clipbet2"
 version = "4.0.0-dev"
 dependencies = [
+ "LooseInterface",
  "frame-benchmarking",
  "frame-support",
  "frame-system",

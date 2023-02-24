@@ -11,6 +11,8 @@
 // }
 
 
+use frame_support::pallet_prelude::*;
+
 pub trait LooseInterface {
-    type ClassId: Parameter + Member + Default + Copy;
+    type ClassId: Parameter + Default + Copy;
 }
