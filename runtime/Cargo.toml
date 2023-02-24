@@ -18,7 +18,7 @@ scale-info = { version = "2.1.1", default-features = false, features = ["derive"
 
 pallet-aura = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", "branch" = "polkadot-v0.9.35" }
 pallet-balances = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", "branch" = "polkadot-v0.9.35" }
-pallet-utility = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", "branch" = "polkadot-v0.9.35" }
+# pallet-utility = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", "branch" = "polkadot-v0.9.35" }
 frame-support = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", "branch" = "polkadot-v0.9.35" }
 pallet-grandpa = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", "branch" = "polkadot-v0.9.35" }
 pallet-randomness-collective-flip = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", "branch" = "polkadot-v0.9.35" }
@@ -54,6 +54,7 @@ pallet-bblott = { version = "4.0.0-dev", default-features = false, path = "../pa
 pallet-clipbets = { version = "4.0.0-dev", default-features = false, path = "../pallets/clipbets" }
 pallet-clipbet2 = { version = "4.0.0-dev", default-features = false, path = "../pallets/clipbet2" }
 pallet-double-map = { path = "../pallets/double-map", default-features = false }
+pallet-utility = { version = "4.0.0-dev", default-features = false, path = "../pallets/utility" }
 
 [build-dependencies]
 substrate-wasm-builder = { version = "5.0.0-dev", git = "https://github.com/paritytech/substrate.git", "branch" = "polkadot-v0.9.35" }
