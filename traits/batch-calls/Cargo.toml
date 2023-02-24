@@ -1,0 +1,20 @@
+[package]
+name = "batch-calls"
+version = "3.0.0"
+edition = "2018"
+authors = ['Substrate DevHub <https://github.com/substrate-developer-hub>']
+repository = 'https://github.com/substrate-developer-hub/recipes'
+description = "A trait that supplies a set of accounts for use in a Substrate runtime"
+license = "GPL-3.0-or-later"
+
+[features]
+default = ['std']
+std = [
+	'sp-std/std',
+]
+
+[dependencies]
+# Substrate packages
+# sp-std = { version = '3.0', default-features = false }
+sp-std = { version = "5.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", "branch" = "polkadot-v0.9.35" }
+
