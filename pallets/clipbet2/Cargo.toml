@@ -21,12 +21,28 @@ frame-benchmarking = { version = "4.0.0-dev", default-features = false, optional
 frame-support = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", "branch" = "polkadot-v0.9.35" }
 frame-system = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", "branch" = "polkadot-v0.9.35" }
 sp-runtime = { version = "7.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", "branch" = "polkadot-v0.9.35" }
+sp-std = { version = "5.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", "branch" = "polkadot-v0.9.35" }
+
+
+# sp-core = { version = "7.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", "branch" = "polkadot-v0.9.35" }
+# sp-core = { version = "6.0.0", git = "https://github.com/paritytech/substrate", branch = "master", package = "sp-core" }
+
+
+
 log = "0.4.17"
 
 LooseInterface = { path = '../../traits/batch-calls/', default-features = false }
+pallet-utility = { version = "4.0.0-dev", default-features = false, path = "../utility" }
+
+hex = { version='0.4.3', default-features=false, features = ['alloc'] }
+# hex-literal = "0.3.4"
+
+
 
 
 # subxt
+# sp_keyring = { version = "7.0.0", git = "https://github.com/paritytech/substrate.git", branch = "master", package = "sp-keyring" }
+
 # sp-keyring = { version = "7.0.0", git = "https://github.com/paritytech/substrate.git", "branch" = "polkadot-v0.9.35" }
 # subxt = "0.27.0"
 # tracing-subscriber = "0.3.11"

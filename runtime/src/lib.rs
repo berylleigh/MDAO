@@ -305,6 +305,8 @@ impl pallet_clipbet2::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type MaxCalls = MaxCalls;
+	type RuntimeCall = RuntimeCall;
+	// type Interface = pallet_utility::Pallet<Runtime>;
 }
 
 // impl pallet_double_map::Config for Runtime {

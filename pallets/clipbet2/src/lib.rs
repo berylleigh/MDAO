@@ -11,16 +11,27 @@ pub use pallet::*;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
-use frame_support::{pallet_prelude::{*, DispatchResult, OptionQuery}, PalletId, traits:: {Currency, ReservableCurrency, ExistenceRequirement::KeepAlive,}};
+use frame_support::{pallet_prelude::{*, DispatchResult, OptionQuery}, dispatch::{Dispatchable, GetDispatchInfo}, PalletId, traits:: {Currency, ReservableCurrency, ExistenceRequirement::KeepAlive,}};
 use frame_system::{pallet_prelude::*, ensure_signed};
 use frame_support::inherent::Vec;
 // use frame_support::dispatch::fmt::Debug;
 use sp_runtime::{traits::{Zero, AccountIdConversion,}, Saturating, print, Perbill, };
+// use LooseInterface::LooseInterface;
 
 // use sp_runtime::traits::Printable;
 use log::{info, debug};
 
-// use sp_keyring::AccountKeyring;
+use codec::{Compact, Encode};
+// // use sp_core::{blake2_256, H256};
+
+// use sp_runtime::{generic::Era, MultiAddress, MultiSignature};
+use sp_runtime::{MultiAddress,};
+use scale_info::prelude::format;
+// use sp_std::vec;
+
+
+
+
 // use subxt::{
 //     tx::PairSigner,
 //     OnlineClient,
@@ -52,7 +63,7 @@ pub mod pallet {
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
-	pub trait Config: frame_system::Config {
+	pub trait Config: frame_system::Config + pallet_utility::Config {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		/// Get the PalletId
@@ -63,7 +74,14 @@ pub mod pallet {
 		/// The max number of calls available in a single bet.
 		#[pallet::constant]
 		type MaxCalls: Get<u32>;
+		/// A dispatchable call.
+		type RuntimeCall: Parameter
+			+ Dispatchable<RuntimeOrigin = Self::RuntimeOrigin>
+			+ GetDispatchInfo
+			+ From<frame_system::Call<Self>>;
 	}
+
+	// type ClassIdOf<T> = <<T as Config>::Interface as LooseInterface>::ClassId;
 
 	
 		// The pallet's runtime storage items.
@@ -285,8 +303,38 @@ pub mod pallet {
 			// 	pub betval: Balance,}
 			log::info!("roundcliptally = {:?}", Self::roundcliptally(&roundid, &cliphash));
 			log::info!("roundtally = {:?}", Self::roundtally(&roundid));
-			log::debug!("roundtally = {:?}", Self::roundtally(&roundid));
+			debug!("roundtally = {:?}", Self::roundtally(&roundid));
 			log::info!("rewardsvec = {:?}", rewardsvec);
+
+			//Construct a vec of RuntimeCalls - calls: Vec<<T as Config>::RuntimeCall>	to send to the utility pallet batch() function.	
+			let pallet_index: u8 = 6;
+			let call_index: u8 = 0;
+		   	// The "transfer" call takes 2 arguments, which are as follows (if we wanted, we could
+			// avoid using `MultiAddress` and encode a 0 u8 and then the account ID, but for simplicity..)
+			// let address = MultiAddress::Id::<_, u32>(AccountKeyring::Bob.to_account_id());
+			let address = MultiAddress::Id::<_, u32>(picker);
+
+			let balance = Compact::from(2000000000000u128);
+		
+			// We put the above data together and now we have something that will encode to the
+			// Same shape as the generated enum would have led to (variant indexes, then args):
+			let call = (pallet_index, call_index, address, balance);
+			// println!("Call: {:?}", call);
+		
+			let mycall = &call.encode();
+			let mycall_hex = format!("0x{}", hex::encode(&mycall));
+			// let mycall_hex = hex_literal::hex![String::from(mycall)].into();
+			// let mycall_hex = hex::encode(&mycall);
+			info!("mycallhex: {:?}", mycall_hex);
+		
+
+			let _calls = sp_std::vec![mycall_hex];
+
+
+			// calls: Vec<<T as Config>::RuntimeCall>
+	
+			// let ding:DispatchResultWithPostInfo = pallet_utility::Pallet::<T>::batch(origin, calls);
+			
 			
 
 

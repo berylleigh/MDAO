@@ -56,6 +56,7 @@
 // mod tests;
 pub mod weights;
 
+use LooseInterface::LooseInterface;
 use codec::{Decode, Encode};
 use frame_support::{
 	dispatch::{extract_actual_weight, GetDispatchInfo, PostDispatchInfo},
@@ -101,6 +102,8 @@ pub mod pallet {
 
 		/// Weight information for extrinsics in this pallet.
 		type WeightInfo: WeightInfo;
+
+		// type Interface: LooseInterface;
 	}
 
 	#[pallet::event]
@@ -509,3 +512,11 @@ impl<T: Config> Pallet<T> {
 			.expect("infinite length input; no invalid inputs for type; qed")
 	}
 }
+// use frame_support::pallet_prelude::*;
+// type ClassIdOf<T> = <<T as Config>::Interface as LooseInterface>::ClassId;
+
+//  // Here we implement the shared trait for this pallet.
+//     // Now it can be loosely coupled to other pallets which expect it.
+//     impl<T: Config> LooseInterface for Pallet<T> {
+//         type ClassId = ClassIdOf<T>;
+//     }
